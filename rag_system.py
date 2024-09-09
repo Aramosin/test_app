@@ -158,6 +158,9 @@ class RAGSystem:
         relevant_docs = self.search(question)
         answer = self.generate_answer(question, relevant_docs)
         return answer
-
 # Initialize the OpenAI client securely
 openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+# Debugging log to check which key is being used
+st.write(f"API Key in use: {openai.api_key[:6]}...")  # Display first 6 characters (should show "sk-...")
+
