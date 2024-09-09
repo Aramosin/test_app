@@ -18,14 +18,14 @@ def num_tokens_from_string(string: str) -> int:
     return len(tokenizer.encode(string))
 
 class RAGSystem:
-    def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
-        # Define folder path for text files
+    def __init__(self, model_name='all-MiniLM-L6-v2'):
+        # Define folder path for JSON and index files
         self.text_files_dir = "text_files"
-
-        # Construct full file paths
-        self.index_file = os.path.join(self.text_files_dir, index_file)
-        self.titles_file = os.path.join(self.text_files_dir, titles_file)
-        self.documents_file = os.path.join(self.text_files_dir, documents_file)
+        
+        # Construct full file paths for JSON and index files
+        self.index_file = os.path.join(self.text_files_dir, "faiss_index.bin")
+        self.titles_file = os.path.join(self.text_files_dir, "document_titles.json")
+        self.documents_file = os.path.join(self.text_files_dir, "processed_documents.json")
 
         # Check if the files exist before loading or creating them
         if not os.path.exists(self.index_file) or not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
@@ -33,12 +33,14 @@ class RAGSystem:
             self.create_index()
             self.create_documents()
         else:
+            st.write("Loading existing files...")
             self.index = faiss.read_index(self.index_file)
             with open(self.titles_file, 'r', encoding='utf-8') as f:
                 self.titles = json.load(f)
             with open(self.documents_file, 'r', encoding='utf-8') as f:
                 self.documents = json.load(f)
-        
+
+        # Initialize Sentence Transformer for embeddings
         self.model = SentenceTransformer(model_name)
         
         st.write(f"Loaded {len(self.documents)} documents:")
@@ -46,9 +48,10 @@ class RAGSystem:
             st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
 
     def create_index(self):
-        """Placeholder for creating FAISS index."""
-        self.index = faiss.IndexFlatL2(384)  # Assuming 384-dimensional vectors
-        # Save index if necessary (optional): faiss.write_index(self.index, self.index_file)
+        """Placeholder for creating FAISS index from raw documents."""
+        self.index = faiss.IndexFlatL2(384)  # Assuming 384-dimensional vectors for embeddings
+        # Optionally save the FAISS index (you'd need to save this properly later)
+        # faiss.write_index(self.index, self.index_file)
 
     def create_documents(self):
         """Create default documents and save them if the files do not exist."""
@@ -56,22 +59,13 @@ class RAGSystem:
         self.titles = ["Sample Document"]
 
         # Save the created documents
-        if self.titles_file:
-            with open(self.titles_file, 'w', encoding='utf-8') as f:
-                json.dump(self.titles, f)
-        else:
-            st.error("Error: titles_file is not defined or is invalid.")
-
-        if self.documents_file:
-            with open(self.documents_file, 'w', encoding='utf-8') as f:
-                json.dump(self.documents, f)
-        else:
-            st.error("Error: documents_file is not defined or is invalid.")
+        with open(self.titles_file, 'w', encoding='utf-8') as f:
+            json.dump(self.titles, f)
+        with open(self.documents_file, 'w', encoding='utf-8') as f:
+            json.dump(self.documents, f)
     
     # Add other methods such as search, get_document_content, etc.
 
 # Usage example:
-# index_file = 'index.faiss'
-# titles_file = 'titles.json'
-# documents_file = 'documents.json'
-# rag = RAGSystem(index_file, titles_file, documents_file)
+# rag = RAGSystem()
+
