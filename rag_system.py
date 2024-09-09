@@ -6,6 +6,7 @@ from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 import tiktoken
 import streamlit as st
+import re
 
 # Initialize the OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -68,37 +69,43 @@ class RAGSystem:
         with open(self.documents_file, 'w', encoding='utf-8') as f:
             json.dump(self.documents, f)
 
-    def search(self, query, k=5):  # Increased k for more potential matches
-        query_vector = self.model.encode([query])
-        D, I = self.index.search(query_vector, k)
-        relevant_docs = [self.titles[i] for i in I[0]]
+        def search(self, query, k=5):
+                query_vector = self.model.encode([query])
+                D, I = self.index.search(query_vector, k)
+                relevant_docs = [self.titles[i] for i in I[0]]
+                
+                # Prioritize grill recipe cards for cooking questions
+                cooking_keywords = ["cook", "grill", "prepare", "recipe"]
+                if any(keyword in query.lower() for keyword in cooking_keywords):
+                    grill_cards = [doc for doc in self.titles if "grill recipe" in doc.lower()]
+                    if grill_cards:
+                        relevant_docs = grill_cards + [doc for doc in relevant_docs if doc not in grill_cards]
+                
+                st.write(f"Relevant documents for query '{query}':")
+                for doc in relevant_docs[:5]:  # Show top 5 relevant docs
+                    st.write(f"- {doc}")
+                return relevant_docs[:5]  # Return top 5 relevant docs
         
-        # Prioritize certain documents based on keywords
-        keyword_doc_map = {
-            "Employee Handbook_Multistate (English)_2024.txt": ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"],
-            "Recipe Cards - Prep.txt": ["recipe", "cook", "prepare", "ingredients"],
-            "8.7.24 grill recipe cards.txt": ["grill", "cook", "recipe", "brisket", "steak", "chicken"]
-        }
-        
-        for doc, keywords in keyword_doc_map.items():
-            if any(keyword in query.lower() for keyword in keywords) and doc in self.titles:
-                if doc not in relevant_docs:
-                    relevant_docs = [doc] + relevant_docs[:4]  # Keep top 5
-        
-        st.write(f"Relevant documents for query '{query}':")
-        for doc in relevant_docs:
-            st.write(f"- {doc}")
-        return relevant_docs
-
-    def get_document_content(self, title, query):
-        for doc in self.documents:
-            if doc['title'] == title:
-                content = doc['content']
-                chunks = self.split_into_chunks(content)
-                relevant_chunks = self.get_relevant_chunks(chunks, query)
-                return relevant_chunks
-        st.write(f"No content found for document: {title}")
-        return []
+            def get_document_content(self, title, query):
+                for doc in self.documents:
+                    if doc['title'] == title:
+                        content = doc['content']
+                        # If it's a grill recipe card and the query is about cooking, extract relevant sections
+                        if "grill recipe" in title.lower() and any(keyword in query.lower() for keyword in ["cook", "grill", "prepare"]):
+                            sections = re.split(r'\n(?=[A-Z\s]{3,}:)', content)  # Split on likely section headers
+                            relevant_sections = []
+                            for section in sections:
+                                if any(keyword in section.lower() for keyword in query.lower().split()):
+                                    relevant_sections.append(section)
+                            if relevant_sections:
+                                return relevant_sections
+                        
+                        # If no specific sections found or it's not a grill recipe card, proceed with chunk-based retrieval
+                        chunks = self.split_into_chunks(content)
+                        relevant_chunks = self.get_relevant_chunks(chunks, query)
+                        return relevant_chunks
+                st.write(f"No content found for document: {title}")
+                return []
 
     def split_into_chunks(self, text, chunk_size=1000):
         return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
@@ -136,13 +143,20 @@ class RAGSystem:
         if context_tokens == 0:
             return self.fallback_response(query)
 
-        prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
+        prompt = f"""Based on the following documents, please answer this question: {query}
+
+If the question is about cooking a specific food item, provide a clear and concise summary of the cooking process, including any important steps, temperatures, or timing information.
+
+Context:
+{context}
+
+Answer:"""
         
         try:
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo-16k",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. If the documents don't contain relevant information, say so and suggest where the user might find the information."},
+                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. For cooking questions, provide clear and concise instructions. If the documents don't contain relevant information, say so and suggest where the user might find the information."},
                     {"role": "user", "content": prompt}
                 ]
             )
