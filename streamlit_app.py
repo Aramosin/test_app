@@ -9,15 +9,15 @@ import json
 # Check if the specific files exist and can be opened
 try:
     with open('faiss_index.bin', 'rb') as f:
-        st.write("FAISS index loaded successfully.")
+        #st.write("FAISS index loaded successfully.")
 
     with open('document_titles.json', 'r') as f:
         titles_data = json.load(f)
-        st.write("Titles loaded successfully:", titles_data)
+        #st.write("Titles loaded successfully:", titles_data)
 
     with open('processed_documents.json', 'r') as f:
         documents_data = json.load(f)
-        st.write("Documents loaded successfully:", documents_data)
+        #st.write("Documents loaded successfully:", documents_data)
 
 except Exception as e:
     st.error(f"Error accessing files: {e}")
