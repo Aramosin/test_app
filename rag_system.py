@@ -109,10 +109,10 @@ class RAGSystem:
         context = ""
         max_tokens = 14000  # Token limit for the context and response
 
-    # Add debugging log for relevant docs
+        # Add debugging log for relevant docs
         st.write(f"Relevant documents: {relevant_docs}")
 
-    # Build the context from relevant documents
+        # Build the context from relevant documents
         for title in relevant_docs:
             relevant_chunks = self.get_document_content(title, query)
             for chunk in relevant_chunks:
@@ -124,34 +124,33 @@ class RAGSystem:
             if num_tokens_from_string(context) > max_tokens:
                 break
 
-    # Debugging logs for context
+        # Debugging logs for context
         st.write(f"Context: {context[:500]}...")  # Show the first 500 characters for clarity
 
         if len(context) == 0:
             st.error("Context is empty, no relevant information found.")
             return "I'm sorry, but I couldn't find any relevant information to answer your question."
 
-    # Build the prompt for OpenAI
+        # Build the prompt for OpenAI
         prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
 
         st.write(f"Prompt to OpenAI: {prompt[:500]}...")  # Show first 500 characters for clarity
 
         try:
-            # Call OpenAI API to get the answer
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k",  # Correct method
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. Provide accurate information based solely on the context provided."},
-                    {"role": "user", "content": prompt}
-                ]
+            # Corrected method for OpenAI SDK 1.0.0+
+            response = openai.completions.create(
+                model="gpt-3.5-turbo-16k",
+                prompt=prompt,  # Use 'prompt' instead of 'messages'
+                max_tokens=3000  # Adjust based on your use case
             )
 
             # Debugging log to show response from OpenAI
             st.write("OpenAI response received.")
-            return response.choices[0].message['content']
+            return response.choices[0].text  # Access the response text correctly
         except Exception as e:
             st.error(f"An error occurred while calling OpenAI: {str(e)}")
             return f"An error occurred: {str(e)}"
+
 
 
     def query(self, question):
