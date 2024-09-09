@@ -104,36 +104,38 @@ class RAGSystem:
         return [chunks[i] for i in top_indices]
 
     def generate_answer(self, query, relevant_docs):
-        context = ""
-        max_tokens = 14000  # Token limit for the context and response
+    context = ""
+    max_tokens = 14000  # Token limit for the context and response
 
-        for title in relevant_docs:
-            relevant_chunks = self.get_document_content(title, query)
-            for chunk in relevant_chunks:
-                new_context = f"Document: {title}\nContent: {chunk}\n\n"
-                if num_tokens_from_string(context + new_context) <= max_tokens:
-                    context += new_context
-                else:
-                    break
-            if num_tokens_from_string(context) > max_tokens:
+    for title in relevant_docs:
+        relevant_chunks = self.get_document_content(title, query)
+        for chunk in relevant_chunks:
+            new_context = f"Document: {title}\nContent: {chunk}\n\n"
+            if num_tokens_from_string(context + new_context) <= max_tokens:
+                context += new_context
+            else:
                 break
+        if num_tokens_from_string(context) > max_tokens:
+            break
 
-        if len(context) == 0:
-            return "I'm sorry, but I couldn't find any relevant information to answer your question."
+    if len(context) == 0:
+        return "I'm sorry, but I couldn't find any relevant information to answer your question."
 
-        prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
-        
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo-16k",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. Provide accurate information based solely on the context provided."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            return response.choices[0].message['content']
-        except Exception as e:
-            return "An error occurred while generating the answer."
+    prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
+    
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-16k",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. Provide accurate information based solely on the context provided."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message['content']
+    except Exception as e:
+        # Print the actual error for better debugging
+        st.error(f"An error occurred: {str(e)}")
+        return f"An error occurred: {str(e)}"
 
     def query(self, question):
         relevant_docs = self.search(question)
