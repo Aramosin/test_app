@@ -1,23 +1,23 @@
+import os
 import streamlit as st
-from rag_system import RAGSystem
+import json
 
-st.title("Chipotle RAG System")
+# List all files in the current working directory to verify visibility
+st.write("Current Working Directory:", os.getcwd())
+st.write("Files in the directory:", os.listdir(os.getcwd()))
 
-@st.cache_resource
-def load_rag_system():
-    index_file = "faiss_index.bin"
-    titles_file = "document_titles.json"
-    documents_file = "processed_documents.json"
-    return RAGSystem(index_file, titles_file, documents_file)
+# Check if the specific files exist and can be opened
+try:
+    with open('faiss_index.bin', 'rb') as f:
+        st.write("FAISS index loaded successfully.")
 
-rag = load_rag_system()
+    with open('document_titles.json', 'r') as f:
+        titles_data = json.load(f)
+        st.write("Titles loaded successfully:", titles_data)
 
-question = st.text_input("Enter your question here")
+    with open('processed_documents.json', 'r') as f:
+        documents_data = json.load(f)
+        st.write("Documents loaded successfully:", documents_data)
 
-if st.button("Ask"):
-    if question:
-        with st.spinner("Generating answer..."):
-            answer = rag.query(question)
-        st.write("Answer:", answer)
-    else:
-        st.write("Please enter a question.")
+except Exception as e:
+    st.error(f"Error accessing files: {e}")
