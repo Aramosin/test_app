@@ -45,6 +45,7 @@ class RAGSystem:
                     self.documents = json.load(f)
 
         except Exception as e:
+            st.error(f"Error loading data: {str(e)}")
             self.create_documents()
 
     def create_index(self):
@@ -65,7 +66,7 @@ class RAGSystem:
             with open(self.documents_file, 'w', encoding='utf-8') as f:
                 json.dump(self.documents, f, ensure_ascii=False, indent=4)
         except Exception as e:
-            pass
+            st.error(f"Error saving documents: {str(e)}")
 
     def search(self, query, k=3):
         query_vector = self.model.encode([query])
@@ -138,20 +139,20 @@ class RAGSystem:
 
         try:
             # Corrected method for OpenAI SDK 1.0.0+
-            response = openai.completions.create(
+            response = openai.chat.completions.create(
                 model="gpt-3.5-turbo-16k",
-                prompt=prompt,  # Use 'prompt' instead of 'messages'
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=3000  # Adjust based on your use case
             )
 
             # Debugging log to show response from OpenAI
             st.write("OpenAI response received.")
-            return response.choices[0].text  # Access the response text correctly
+            return response.choices[0].message['content']  # Access the response text correctly
         except Exception as e:
             st.error(f"An error occurred while calling OpenAI: {str(e)}")
             return f"An error occurred: {str(e)}"
-
-
 
     def query(self, question):
         relevant_docs = self.search(question)
