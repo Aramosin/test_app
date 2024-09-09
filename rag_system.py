@@ -149,7 +149,8 @@ class RAGSystem:
 
             # Debugging log to show response from OpenAI
             st.write("OpenAI response received.")
-            return response.choices[0].message['content']  # Access the response text correctly
+            return response.choices[0].message.content  # Correct
+  # Access the response text correctly
         except Exception as e:
             st.error(f"An error occurred while calling OpenAI: {str(e)}")
             return f"An error occurred: {str(e)}"
