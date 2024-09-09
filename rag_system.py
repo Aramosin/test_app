@@ -128,13 +128,47 @@ class RAGSystem:
         for title in relevant_docs:
             relevant_chunks = self.get_document_content(title, query)
             for chunk in relevant_chunks:
-                new_context = f"Document: {title}\nContent: {chunk}\n\n"
+                # Use a cleaner and more structured format for adding context
+                new_context = f"Document: {title}\nSteps:\n{chunk}\n\n"
                 if num_tokens_from_string(context + new_context) <= max_tokens:
                     context += new_context
                 else:
                     break
             if num_tokens_from_string(context) > max_tokens:
                 break
+
+        # Debugging logs for context
+        st.write(f"Context being passed to OpenAI: {context[:500]}...")  # Show the first 500 characters for clarity
+
+        if len(context) == 0:
+            st.error("Context is empty, no relevant information found.")
+            return "I'm sorry, but I couldn't find any relevant information to answer your question."
+
+        # Build the prompt for OpenAI
+        prompt = f"Answer the following question based only on the provided document context:\n\nQuestion: {query}\n\nContext:\n{context}\n\nAnswer:"
+
+        st.write(f"Prompt to OpenAI: {prompt[:500]}...")  # Show the first 500 characters for clarity
+
+        try:
+            # Corrected method for OpenAI SDK 1.0.0+
+            response = openai.chat.completions.create(
+                model="gpt-3.5-turbo-16k",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant. Answer the user’s question based solely on the provided documents. Do not use external knowledge."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=3000  # Adjust based on your use case
+            )
+
+            # Debugging log to show response from OpenAI
+            st.write("OpenAI response received.")
+        
+            # Correctly access the response text using dot notation
+            return response.choices[0].message.content  
+        except Exception as e:
+            st.error(f"An error occurred while calling OpenAI: {str(e)}")
+            return f"An error occurred: {str(e)}"
+
 
         # Debugging logs for context
         st.write(f"Context: {context[:500]}...")  # Show the first 500 characters for clarity
