@@ -5,7 +5,6 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 import tiktoken
-import streamlit as st
 
 class RAGSystem:
     def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
@@ -133,7 +132,7 @@ class RAGSystem:
         answer = self.generate_answer(question, relevant_docs)
         return answer
 
-# Initialize the OpenAI client securely using Streamlit secrets
+# Initialize the OpenAI client securely
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Helper function for counting tokens in a string
@@ -142,3 +141,4 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 def num_tokens_from_string(string: str) -> int:
     """Returns the number of tokens in a text string."""
     return len(tokenizer.encode(string))
+
