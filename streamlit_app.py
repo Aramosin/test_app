@@ -3,8 +3,8 @@ import streamlit as st
 import json
 
 # List all files in the current working directory to verify visibility
-st.write("Current Working Directory:", os.getcwd())
-st.write("Files in the directory:", os.listdir(os.getcwd()))
+#st.write("Current Working Directory:", os.getcwd())
+#st.write("Files in the directory:", os.listdir(os.getcwd()))
 
 # Check if the specific files exist and can be opened
 try:
