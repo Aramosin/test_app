@@ -133,7 +133,7 @@ class RAGSystem:
         return answer
 
 # Initialize the OpenAI client securely
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Helper function for counting tokens in a string
 tokenizer = tiktoken.get_encoding("cl100k_base")
