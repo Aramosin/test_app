@@ -49,8 +49,8 @@ class RAGSystem:
                     self.create_documents()
 
             st.write(f"Loaded {len(self.documents)} documents:")
-            for doc in self.documents:
-                st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
+            #for doc in self.documents:
+             #   st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
 
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
