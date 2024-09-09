@@ -24,30 +24,25 @@ class RAGSystem:
         try:
             # Load or create the FAISS index
             if not os.path.exists(self.index_file):
-                st.write("Index file not found. Creating new index...")
                 self.create_index()
             else:
                 self.index = faiss.read_index(self.index_file)
-                st.write("FAISS index loaded successfully.")
 
             # Load document files
             if not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
-                st.write("Document files not found. Creating new documents...")
                 self.create_documents()
             else:
                 with open(self.titles_file, 'r', encoding='utf-8') as f:
                     self.titles = json.load(f)
                 with open(self.documents_file, 'r', encoding='utf-8') as f:
                     self.documents = json.load(f)
-                st.write(f"{len(self.documents)} documents loaded successfully.")
 
         except Exception as e:
-            st.error(f"An unexpected error occurred: {e}")
+            self.create_documents()
 
     def create_index(self):
         # Placeholder for creating FAISS index
         self.index = faiss.IndexFlatL2(384)  # 384 is the dimension for 'all-MiniLM-L6-v2'
-        st.write("New FAISS index created.")
 
     def create_documents(self):
         # Placeholder for document creation
@@ -62,9 +57,8 @@ class RAGSystem:
                 json.dump(self.titles, f, ensure_ascii=False, indent=4)
             with open(self.documents_file, 'w', encoding='utf-8') as f:
                 json.dump(self.documents, f, ensure_ascii=False, indent=4)
-            st.write("New documents created and saved.")
         except Exception as e:
-            st.error(f"Failed to save documents: {e}")
+            pass
 
     def search(self, query, k=3):
         query_vector = self.model.encode([query])
