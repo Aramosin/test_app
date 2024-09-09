@@ -138,13 +138,14 @@ class RAGSystem:
 
         try:
             # Call OpenAI API to get the answer
-            response = openai.ChatCompletion.create(
+            response = openai.completions.create(
                 model="gpt-3.5-turbo-16k",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. Provide accurate information based solely on the context provided."},
                     {"role": "user", "content": prompt}
                 ]
             )
+
 
             # Debugging log to show response from OpenAI
             st.write("OpenAI response received.")
