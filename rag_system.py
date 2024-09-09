@@ -114,30 +114,29 @@ class RAGSystem:
 
     def get_relevant_chunks(self, chunks, query):
         query_embedding = self.model.encode([query])
-    
-        # Only keep chunks with the word 'recipe' or 'salsa' (as an example)
-        filtered_chunks = [chunk for chunk in chunks if 'recipe' in chunk.lower() or 'salsa' in chunk.lower()]
+
+        # Prioritize chunks that mention key terms from the query (e.g., 'salsa', 'tomato')
+        keywords = query.lower().split()
+        filtered_chunks = [chunk for chunk in chunks if any(keyword in chunk.lower() for keyword in keywords)]
 
         if not filtered_chunks:
-            # If no chunks match the filter, fall back to regular chunks
+            # If no chunks match the filter, fall back to the default chunks
             filtered_chunks = chunks
 
-        # Encode the filtered chunks
+        # Now perform embedding similarity search on the filtered chunks
         chunk_embeddings = self.model.encode(filtered_chunks)
-    
-        # Calculate similarities
         similarities = np.dot(chunk_embeddings, query_embedding.T).squeeze()
-    
+
         # Get top 3 most similar chunks
         top_indices = np.argsort(similarities)[::-1][:3]
-    
         relevant_chunks = [filtered_chunks[i] for i in top_indices]
-    
+
         # Debugging: Log similarity scores and selected chunks
         st.write(f"Similarity scores: {similarities}")
         st.write(f"Selected chunks: {relevant_chunks}")
 
         return relevant_chunks
+
 
     def generate_answer(self, query, relevant_docs):
         st.write("Starting to generate answer...")  # Debugging log
