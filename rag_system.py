@@ -103,7 +103,7 @@ class RAGSystem:
         
         return [chunks[i] for i in top_indices]
 
-    def generate_answer(self, query, relevant_docs):
+   def generate_answer(self, query, relevant_docs):
     st.write("Starting to generate answer...")  # Debugging log
 
     context = ""
