@@ -19,21 +19,24 @@ def num_tokens_from_string(string: str) -> int:
 
 class RAGSystem:
     def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
-        # Save file paths for later use
-        self.index_file = index_file
-        self.titles_file = titles_file
-        self.documents_file = documents_file
+        # Define folder path for text files
+        self.text_files_dir = "text_files"
+
+        # Construct full file paths
+        self.index_file = os.path.join(self.text_files_dir, index_file)
+        self.titles_file = os.path.join(self.text_files_dir, titles_file)
+        self.documents_file = os.path.join(self.text_files_dir, documents_file)
 
         # Check if the files exist before loading or creating them
-        if not os.path.exists(index_file) or not os.path.exists(titles_file) or not os.path.exists(documents_file):
+        if not os.path.exists(self.index_file) or not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
             st.write("Files missing. Creating default index and documents...")
             self.create_index()
             self.create_documents()
         else:
-            self.index = faiss.read_index(index_file)
-            with open(titles_file, 'r', encoding='utf-8') as f:
+            self.index = faiss.read_index(self.index_file)
+            with open(self.titles_file, 'r', encoding='utf-8') as f:
                 self.titles = json.load(f)
-            with open(documents_file, 'r', encoding='utf-8') as f:
+            with open(self.documents_file, 'r', encoding='utf-8') as f:
                 self.documents = json.load(f)
         
         self.model = SentenceTransformer(model_name)
@@ -45,7 +48,7 @@ class RAGSystem:
     def create_index(self):
         """Placeholder for creating FAISS index."""
         self.index = faiss.IndexFlatL2(384)  # Assuming 384-dimensional vectors
-        # Optionally save index logic here if needed, e.g., faiss.write_index
+        # Save index if necessary (optional): faiss.write_index(self.index, self.index_file)
 
     def create_documents(self):
         """Create default documents and save them if the files do not exist."""
@@ -65,5 +68,10 @@ class RAGSystem:
         else:
             st.error("Error: documents_file is not defined or is invalid.")
     
-    # Other methods such as search, get_document_content, etc., go here
+    # Add other methods such as search, get_document_content, etc.
 
+# Usage example:
+# index_file = 'index.faiss'
+# titles_file = 'titles.json'
+# documents_file = 'documents.json'
+# rag = RAGSystem(index_file, titles_file, documents_file)
