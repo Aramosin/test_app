@@ -1,36 +1,65 @@
 import os
 import json
 import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from openai import OpenAI
+import tiktoken
 import streamlit as st
 
-# Assume the exact absolute paths to the files
-base_dir = os.getcwd()  # You can hardcode the absolute path here if needed
-index_file = os.path.join(base_dir, "faiss_index.bin")
-titles_file = os.path.join(base_dir, "document_titles.json")
-documents_file = os.path.join(base_dir, "processed_documents.json")
+class RAGSystem:
+    def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
+        self.index_file = index_file
+        self.titles_file = titles_file
+        self.documents_file = documents_file
+        self.model_name = model_name
+        self.model = SentenceTransformer(model_name)
+        
+        self.load_or_create_data()
 
-st.title("Chipotle RAG System - File Loading Test")
+    def load_or_create_data(self):
+        if not os.path.exists(self.index_file):
+            st.write("Index file not found. Creating new index...")
+            self.create_index()
+        else:
+            self.index = faiss.read_index(self.index_file)
 
-# Log the exact paths to ensure they're correct
-st.write(f"Index file path: {index_file}")
-st.write(f"Titles file path: {titles_file}")
-st.write(f"Documents file path: {documents_file}")
+        if not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
+            st.write("Document files not found. Creating new documents...")
+            self.create_documents()
+        else:
+            with open(self.titles_file, 'r', encoding='utf-8') as f:
+                self.titles = json.load(f)
+            with open(self.documents_file, 'r', encoding='utf-8') as f:
+                self.documents = json.load(f)
 
-try:
-    # Try loading each file one by one
-    st.write("Loading FAISS index...")
-    index = faiss.read_index(index_file)
-    st.write("FAISS index loaded successfully!")
+        st.write(f"Loaded {len(self.documents)} documents:")
+        for doc in self.documents:
+            st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
 
-    st.write("Loading document titles...")
-    with open(titles_file, 'r', encoding='utf-8') as f:
-        titles = json.load(f)
-    st.write(f"Loaded {len(titles)} titles successfully!")
+    def create_index(self):
+        # This is a placeholder. In a real scenario, you'd need to implement
+        # logic to create the FAISS index based on your documents.
+        self.index = faiss.IndexFlatL2(384)  # 384 is the dimension for 'all-MiniLM-L6-v2'
 
-    st.write("Loading processed documents...")
-    with open(documents_file, 'r', encoding='utf-8') as f:
-        documents = json.load(f)
-    st.write(f"Loaded {len(documents)} documents successfully!")
+    def create_documents(self):
+        # This is a placeholder. In a real scenario, you'd need to implement
+        # logic to create your documents, possibly by processing text files
+        # in your repository or downloading from a secure location.
+        self.documents = [
+            {"title": "Sample Document", "content": "This is a sample document content."}
+        ]
+        self.titles = ["Sample Document"]
 
-except Exception as e:
-    st.error(f"Error: {e}")
+        # Save the created documents
+        with open(self.titles_file, 'w', encoding='utf-8') as f:
+            json.dump(self.titles, f)
+        with open(self.documents_file, 'w', encoding='utf-8') as f:
+            json.dump(self.documents, f)
+
+    # ... rest of the RAGSystem class methods ...
+
+# Initialize the OpenAI client
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+# ... rest of your code ...
