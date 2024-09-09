@@ -3,14 +3,10 @@ import json
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from openai import OpenAI
 import tiktoken
 import streamlit as st
 
-# Initialize the OpenAI client
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# Initialize tokenizer
+# Initialize the tokenizer
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
 def num_tokens_from_string(string: str) -> int:
@@ -19,15 +15,18 @@ def num_tokens_from_string(string: str) -> int:
 
 class RAGSystem:
     def __init__(self, model_name='all-MiniLM-L6-v2'):
+        # Print the current working directory for debugging
+        st.write(f"Current working directory: {os.getcwd()}")
+
         # Base directory for faiss index, titles, and processed documents
-        self.base_dir = "."
+        self.base_dir = os.getcwd()  # Ensure we're using the correct working directory
         
-        # Construct full file paths for faiss index, titles, and processed documents in the base directory
+        # File paths for faiss index, titles, and processed documents
         self.index_file = os.path.join(self.base_dir, "faiss_index.bin")
         self.titles_file = os.path.join(self.base_dir, "document_titles.json")
         self.documents_file = os.path.join(self.base_dir, "processed_documents.json")
 
-        # Debugging: Log the exact file paths being checked
+        # Debug: Print the actual paths being used
         st.write(f"Index file path: {self.index_file}")
         st.write(f"Titles file path: {self.titles_file}")
         st.write(f"Documents file path: {self.documents_file}")
@@ -40,10 +39,10 @@ class RAGSystem:
         if not os.path.exists(self.documents_file):
             st.error(f"Documents file not found: {self.documents_file}")
 
-        # Check if all files exist before loading them
+        # If files are missing, create default documents
         if not os.path.exists(self.index_file) or not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
-            st.write("Required files are missing. Please ensure the index and JSON files are present in the base directory.")
-            self.create_index()  # If the files don't exist, create defaults
+            st.write("Files missing. Creating default index and documents...")
+            self.create_index()
             self.create_documents()
         else:
             st.write("Loading existing FAISS index and document metadata...")
@@ -61,7 +60,7 @@ class RAGSystem:
             st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
 
     def create_index(self):
-        """Placeholder for creating FAISS index from raw documents."""
+        """Create a default FAISS index."""
         self.index = faiss.IndexFlatL2(384)  # Assuming 384-dimensional vectors for embeddings
         # Optionally save the FAISS index (you'd need to save this properly later)
         # faiss.write_index(self.index, self.index_file)
@@ -76,8 +75,16 @@ class RAGSystem:
             json.dump(self.titles, f)
         with open(self.documents_file, 'w', encoding='utf-8') as f:
             json.dump(self.documents, f)
-    
-    # Add other methods such as search, get_document_content, etc.
 
-# Usage example:
-# rag = RAGSystem()
+# Initialize the system
+st.title("Chipotle RAG System")
+rag_system = RAGSystem()
+
+# Query interface
+query = st.text_input("Enter your question here")
+if st.button("Ask"):
+    st.write(f"Processing query: {query}")
+    # (Assuming you have a query method in the system to handle this)
+    # result = rag_system.query(query)
+    # st.write(result)
+
