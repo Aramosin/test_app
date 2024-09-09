@@ -49,63 +49,54 @@ class RAGSystem:
             st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
 
     def create_index(self):
-        # This is a placeholder. In a real scenario, you'd need to implement
-        # logic to create the FAISS index based on your documents.
         self.index = faiss.IndexFlatL2(384)  # 384 is the dimension for 'all-MiniLM-L6-v2'
         faiss.write_index(self.index, self.index_file)
 
     def create_documents(self):
-        # This is a placeholder. In a real scenario, you'd need to implement
-        # logic to create your documents, possibly by processing text files
-        # in your repository or downloading from a secure location.
         self.documents = [
             {"title": "Sample Document", "content": "This is a sample document content."}
         ]
         self.titles = ["Sample Document"]
 
-        # Save the created documents
         with open(self.titles_file, 'w', encoding='utf-8') as f:
             json.dump(self.titles, f)
         with open(self.documents_file, 'w', encoding='utf-8') as f:
             json.dump(self.documents, f)
 
-        def search(self, query, k=5):
-                query_vector = self.model.encode([query])
-                D, I = self.index.search(query_vector, k)
-                relevant_docs = [self.titles[i] for i in I[0]]
-                
-                # Prioritize grill recipe cards for cooking questions
-                cooking_keywords = ["cook", "grill", "prepare", "recipe"]
-                if any(keyword in query.lower() for keyword in cooking_keywords):
-                    grill_cards = [doc for doc in self.titles if "grill recipe" in doc.lower()]
-                    if grill_cards:
-                        relevant_docs = grill_cards + [doc for doc in relevant_docs if doc not in grill_cards]
-                
-                st.write(f"Relevant documents for query '{query}':")
-                for doc in relevant_docs[:5]:  # Show top 5 relevant docs
-                    st.write(f"- {doc}")
-                return relevant_docs[:5]  # Return top 5 relevant docs
+    def search(self, query, k=5):
+        query_vector = self.model.encode([query])
+        D, I = self.index.search(query_vector, k)
+        relevant_docs = [self.titles[i] for i in I[0]]
         
-            def get_document_content(self, title, query):
-                for doc in self.documents:
-                    if doc['title'] == title:
-                        content = doc['content']
-                        # If it's a grill recipe card and the query is about cooking, extract relevant sections
-                        if "grill recipe" in title.lower() and any(keyword in query.lower() for keyword in ["cook", "grill", "prepare"]):
-                            sections = re.split(r'\n(?=[A-Z\s]{3,}:)', content)  # Split on likely section headers
-                            relevant_sections = []
-                            for section in sections:
-                                if any(keyword in section.lower() for keyword in query.lower().split()):
-                                    relevant_sections.append(section)
-                            if relevant_sections:
-                                return relevant_sections
-                        
-                        # If no specific sections found or it's not a grill recipe card, proceed with chunk-based retrieval
-                        chunks = self.split_into_chunks(content)
-                        relevant_chunks = self.get_relevant_chunks(chunks, query)
-                        return relevant_chunks
-                st.write(f"No content found for document: {title}")
-                return []
+        cooking_keywords = ["cook", "grill", "prepare", "recipe"]
+        if any(keyword in query.lower() for keyword in cooking_keywords):
+            grill_cards = [doc for doc in self.titles if "grill recipe" in doc.lower()]
+            if grill_cards:
+                relevant_docs = grill_cards + [doc for doc in relevant_docs if doc not in grill_cards]
+        
+        st.write(f"Relevant documents for query '{query}':")
+        for doc in relevant_docs[:5]:  # Show top 5 relevant docs
+            st.write(f"- {doc}")
+        return relevant_docs[:5]  # Return top 5 relevant docs
+
+    def get_document_content(self, title, query):
+        for doc in self.documents:
+            if doc['title'] == title:
+                content = doc['content']
+                if "grill recipe" in title.lower() and any(keyword in query.lower() for keyword in ["cook", "grill", "prepare"]):
+                    sections = re.split(r'\n(?=[A-Z\s]{3,}:)', content)  # Split on likely section headers
+                    relevant_sections = []
+                    for section in sections:
+                        if any(keyword in section.lower() for keyword in query.lower().split()):
+                            relevant_sections.append(section)
+                    if relevant_sections:
+                        return relevant_sections
+                
+                chunks = self.split_into_chunks(content)
+                relevant_chunks = self.get_relevant_chunks(chunks, query)
+                return relevant_chunks
+        st.write(f"No content found for document: {title}")
+        return []
 
     def split_into_chunks(self, text, chunk_size=1000):
         return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
