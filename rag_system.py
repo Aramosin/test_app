@@ -78,21 +78,27 @@ class RAGSystem:
             st.error(f"Failed to save documents: {e}")
 
     def search(self, query, k=3):
-        query_vector = self.model.encode([query])
-        D, I = self.index.search(query_vector, k)
-        relevant_docs = [self.titles[i] for i in I[0]]
+    st.write(f"Running FAISS search for query: {query}")
 
-        # Prioritize Employee Handbook for HR-related queries
-        hr_keywords = ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"]
-        handbook_title = "Employee Handbook_Multistate (English)_2024.txt"
-        if any(keyword in query.lower() for keyword in hr_keywords) and handbook_title in self.titles:
-            if handbook_title not in relevant_docs:
-                relevant_docs = [handbook_title] + relevant_docs[:2]
+    # Encode the query and search the FAISS index
+    query_vector = self.model.encode([query])
+    D, I = self.index.search(query_vector, k)
+    
+    st.write(f"FAISS search results: {I}")
 
-        st.write(f"Relevant documents for query '{query}':")
-        for doc in relevant_docs:
-            st.write(f"- {doc}")
-        return relevant_docs
+    relevant_docs = [self.titles[i] for i in I[0]]
+
+    # Prioritize Employee Handbook for HR-related queries (if needed)
+    hr_keywords = ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"]
+    handbook_title = "Employee Handbook_Multistate (English)_2024.txt"
+    
+    if any(keyword in query.lower() for keyword in hr_keywords) and handbook_title in self.titles:
+        if handbook_title not in relevant_docs:
+            relevant_docs = [handbook_title] + relevant_docs[:2]
+
+    st.write(f"Relevant documents found: {relevant_docs}")
+    return relevant_docs
+
 
     def get_document_content(self, title, query):
         for doc in self.documents:
