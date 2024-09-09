@@ -68,16 +68,22 @@ class RAGSystem:
         with open(self.documents_file, 'w', encoding='utf-8') as f:
             json.dump(self.documents, f)
 
-    def search(self, query, k=3):
+    def search(self, query, k=5):  # Increased k for more potential matches
         query_vector = self.model.encode([query])
         D, I = self.index.search(query_vector, k)
         relevant_docs = [self.titles[i] for i in I[0]]
         
-        # Prioritize Handbook for HR-related queries
-        hr_keywords = ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"]
-        if any(keyword in query.lower() for keyword in hr_keywords) and "Employee Handbook_Multistate (English)_2024.txt" in self.titles:
-            if "Employee Handbook_Multistate (English)_2024.txt" not in relevant_docs:
-                relevant_docs = ["Employee Handbook_Multistate (English)_2024.txt"] + relevant_docs[:2]
+        # Prioritize certain documents based on keywords
+        keyword_doc_map = {
+            "Employee Handbook_Multistate (English)_2024.txt": ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"],
+            "Recipe Cards - Prep.txt": ["recipe", "cook", "prepare", "ingredients"],
+            "8.7.24 grill recipe cards.txt": ["grill", "cook", "recipe", "brisket", "steak", "chicken"]
+        }
+        
+        for doc, keywords in keyword_doc_map.items():
+            if any(keyword in query.lower() for keyword in keywords) and doc in self.titles:
+                if doc not in relevant_docs:
+                    relevant_docs = [doc] + relevant_docs[:4]  # Keep top 5
         
         st.write(f"Relevant documents for query '{query}':")
         for doc in relevant_docs:
@@ -128,7 +134,7 @@ class RAGSystem:
         st.write(context[:500] + "..." if len(context) > 500 else context)
 
         if context_tokens == 0:
-            return "I'm sorry, but I couldn't find any relevant information to answer your question."
+            return self.fallback_response(query)
 
         prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
         
@@ -136,7 +142,7 @@ class RAGSystem:
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo-16k",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. Provide accurate information based solely on the context provided."},
+                    {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. If the documents don't contain relevant information, say so and suggest where the user might find the information."},
                     {"role": "user", "content": prompt}
                 ]
             )
@@ -144,6 +150,21 @@ class RAGSystem:
         except Exception as e:
             st.error(f"An error occurred while generating the answer: {str(e)}")
             return "I'm sorry, but an error occurred while generating the answer. Please try again later."
+
+    def fallback_response(self, query):
+        prompt = f"The documents don't contain specific information about '{query}'. Please provide a general response and suggest where the user might find this information."
+        try:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant. When you don't have specific information, provide general advice and suggest where to find more details."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            st.error(f"An error occurred while generating the fallback response: {str(e)}")
+            return "I'm sorry, but I couldn't find specific information about that in the documents I have access to. You might want to check with a manager or look in the company's recipe guide for more details."
 
     def query(self, question):
         relevant_docs = self.search(question)
