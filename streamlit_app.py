@@ -1,8 +1,7 @@
-import os
 import streamlit as st
 from rag_system import RAGSystem  # Import the RAGSystem class
 
-# Initialize the RAG system
+# Initialize the RAG system with file paths
 index_file = 'faiss_index.bin'
 titles_file = 'document_titles.json'
 documents_file = 'processed_documents.json'
@@ -18,7 +17,7 @@ query_input = st.text_input("Ask a question:")
 
 # Process the query when the user submits it
 if query_input:
+    st.write("Processing your query...")
     answer = rag_system.query(query_input)
     st.write("Answer:")
     st.write(answer)
-
