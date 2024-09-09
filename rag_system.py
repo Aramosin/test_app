@@ -92,7 +92,7 @@ class RAGSystem:
                 return relevant_chunks
         return []
 
-    def split_into_chunks(self, text, chunk_size=1000):
+    def split_into_chunks(self, text, chunk_size=500):
         return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
 
     def get_relevant_chunks(self, chunks, query):
