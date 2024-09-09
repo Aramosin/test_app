@@ -9,9 +9,9 @@ import streamlit as st
 
 class RAGSystem:
     def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
-        self.index_file = index_file
-        self.titles_file = titles_file
-        self.documents_file = documents_file
+        self.index_file = os.path.abspath(index_file)
+        self.titles_file = os.path.abspath(titles_file)
+        self.documents_file = os.path.abspath(documents_file)
         self.model_name = model_name
         self.model = SentenceTransformer(model_name)
         
@@ -24,43 +24,55 @@ class RAGSystem:
             st.write("Index file not found. Creating new index...")
             self.create_index()
         else:
-            self.index = faiss.read_index(self.index_file)
-
+            try:
+                self.index = faiss.read_index(self.index_file)
+                st.write("FAISS index loaded successfully.")
+            except Exception as e:
+                st.error(f"Failed to load FAISS index: {e}")
+                self.create_index()
+    
         # Load or create document files
         if not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
             st.write("Document files not found. Creating new documents...")
             self.create_documents()
         else:
-            with open(self.titles_file, 'r', encoding='utf-8') as f:
-                self.titles = json.load(f)
-            with open(self.documents_file, 'r', encoding='utf-8') as f:
-                self.documents = json.load(f)
+            try:
+                with open(self.titles_file, 'r', encoding='utf-8') as f:
+                    self.titles = json.load(f)
+                with open(self.documents_file, 'r', encoding='utf-8') as f:
+                    self.documents = json.load(f)
+                st.write("Document files loaded successfully.")
+            except Exception as e:
+                st.error(f"Failed to load document files: {e}")
+                self.create_documents()
 
         st.write(f"Loaded {len(self.documents)} documents:")
         for doc in self.documents:
             st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
 
     def create_index(self):
-        # This is a placeholder method for creating FAISS index.
-        # The dimension 384 corresponds to the embedding size of 'all-MiniLM-L6-v2'.
-        self.index = faiss.IndexFlatL2(384)
+        # Placeholder for creating FAISS index. Implement your indexing logic here.
+        self.index = faiss.IndexFlatL2(384)  # Example: 384 dimensions for 'all-MiniLM-L6-v2'
         st.write("New FAISS index created.")
+        # Optionally, save the index if you have data
+        # faiss.write_index(self.index, self.index_file)
 
     def create_documents(self):
-        # This is a placeholder method for document creation.
-        # You need to implement your actual logic for document processing.
+        # Placeholder for document creation. Implement your document processing logic here.
         self.documents = [
             {"title": "Sample Document", "content": "This is a sample document content."}
         ]
         self.titles = ["Sample Document"]
 
         # Save the newly created documents
-        with open(self.titles_file, 'w', encoding='utf-8') as f:
-            json.dump(self.titles, f)
-        with open(self.documents_file, 'w', encoding='utf-8') as f:
-            json.dump(self.documents, f)
-        
-        st.write("New documents created and saved.")
+        try:
+            with open(self.titles_file, 'w', encoding='utf-8') as f:
+                json.dump(self.titles, f, ensure_ascii=False, indent=4)
+            with open(self.documents_file, 'w', encoding='utf-8') as f:
+                json.dump(self.documents, f, ensure_ascii=False, indent=4)
+            st.write("New documents created and saved.")
+        except Exception as e:
+            st.error(f"Failed to save documents: {e}")
 
     def search(self, query, k=3):
         query_vector = self.model.encode([query])
@@ -69,9 +81,10 @@ class RAGSystem:
 
         # Prioritize Employee Handbook for HR-related queries
         hr_keywords = ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"]
-        if any(keyword in query.lower() for keyword in hr_keywords) and "Employee Handbook_Multistate (English)_2024.txt" in self.titles:
-            if "Employee Handbook_Multistate (English)_2024.txt" not in relevant_docs:
-                relevant_docs = ["Employee Handbook_Multistate (English)_2024.txt"] + relevant_docs[:2]
+        handbook_title = "Employee Handbook_Multistate (English)_2024.txt"
+        if any(keyword in query.lower() for keyword in hr_keywords) and handbook_title in self.titles:
+            if handbook_title not in relevant_docs:
+                relevant_docs = [handbook_title] + relevant_docs[:2]
 
         st.write(f"Relevant documents for query '{query}':")
         for doc in relevant_docs:
@@ -158,9 +171,23 @@ def num_tokens_from_string(string: str) -> int:
 
 # Streamlit app
 st.title("RAG-based QA System")
+
+# Debug: Display current working directory
+st.write(f"Current Working Directory: {os.getcwd()}")
+
+# Define absolute paths
+index_file = r"E:\PROJECT\chipotle\faiss_index.bin"
+titles_file = r"E:\PROJECT\chipotle\document_titles.json"
+documents_file = r"E:\PROJECT\chipotle\processed_documents.json"
+
+# Optionally, check if files exist and display their paths
+st.write("Index file exists:", os.path.exists(index_file))
+st.write("Titles file exists:", os.path.exists(titles_file))
+st.write("Documents file exists:", os.path.exists(documents_file))
+
 query_input = st.text_input("Ask a question:")
 if query_input:
-    rag_system = RAGSystem('faiss_index.bin', 'document_titles.json', 'processed_documents.json')
+    rag_system = RAGSystem(index_file, titles_file, documents_file)
     answer = rag_system.query(query_input)
     st.write("Answer:")
     st.write(answer)
