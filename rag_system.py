@@ -9,10 +9,11 @@ import streamlit as st
 
 class RAGSystem:
     def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
-        # Use absolute paths directly for all files
-        self.index_file = index_file
-        self.titles_file = titles_file
-        self.documents_file = documents_file
+        # Use absolute paths based on the script's location
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.index_file = os.path.join(base_dir, index_file)
+        self.titles_file = os.path.join(base_dir, titles_file)
+        self.documents_file = os.path.join(base_dir, documents_file)
         self.model_name = model_name
         self.model = SentenceTransformer(model_name)
         
@@ -26,31 +27,19 @@ class RAGSystem:
                 st.write("Index file not found. Creating new index...")
                 self.create_index()
             else:
-                try:
-                    self.index = faiss.read_index(self.index_file)
-                    st.write("FAISS index loaded successfully.")
-                except Exception as e:
-                    st.error(f"Error loading FAISS index: {e}")
-                    self.create_index()
+                self.index = faiss.read_index(self.index_file)
+                st.write("FAISS index loaded successfully.")
 
-            # Load or create document files
+            # Load document files
             if not os.path.exists(self.titles_file) or not os.path.exists(self.documents_file):
                 st.write("Document files not found. Creating new documents...")
                 self.create_documents()
             else:
-                try:
-                    with open(self.titles_file, 'r', encoding='utf-8') as f:
-                        self.titles = json.load(f)
-                    with open(self.documents_file, 'r', encoding='utf-8') as f:
-                        self.documents = json.load(f)
-                    st.write(f"Document files loaded successfully. Loaded {len(self.documents)} documents.")
-                except Exception as e:
-                    st.error(f"Error loading document files: {e}")
-                    self.create_documents()
-
-            st.write(f"Loaded {len(self.documents)} documents:")
-            #for doc in self.documents:
-             #   st.write(f"- {doc['title']} (content length: {len(doc['content'])} characters)")
+                with open(self.titles_file, 'r', encoding='utf-8') as f:
+                    self.titles = json.load(f)
+                with open(self.documents_file, 'r', encoding='utf-8') as f:
+                    self.documents = json.load(f)
+                st.write(f"{len(self.documents)} documents loaded successfully.")
 
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
@@ -78,27 +67,19 @@ class RAGSystem:
             st.error(f"Failed to save documents: {e}")
 
     def search(self, query, k=3):
-    st.write(f"Running FAISS search for query: {query}")
+        query_vector = self.model.encode([query])
+        D, I = self.index.search(query_vector, k)
+        relevant_docs = [self.titles[i] for i in I[0]]
 
-    # Encode the query and search the FAISS index
-    query_vector = self.model.encode([query])
-    D, I = self.index.search(query_vector, k)
-    
-    st.write(f"FAISS search results: {I}")
+        # Prioritize Employee Handbook for HR-related queries (if needed)
+        hr_keywords = ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"]
+        handbook_title = "Employee Handbook_Multistate (English)_2024.txt"
+        
+        if any(keyword in query.lower() for keyword in hr_keywords) and handbook_title in self.titles:
+            if handbook_title not in relevant_docs:
+                relevant_docs = [handbook_title] + relevant_docs[:2]
 
-    relevant_docs = [self.titles[i] for i in I[0]]
-
-    # Prioritize Employee Handbook for HR-related queries (if needed)
-    hr_keywords = ["leave", "vacation", "time off", "sick", "absence", "holiday", "benefits", "policy"]
-    handbook_title = "Employee Handbook_Multistate (English)_2024.txt"
-    
-    if any(keyword in query.lower() for keyword in hr_keywords) and handbook_title in self.titles:
-        if handbook_title not in relevant_docs:
-            relevant_docs = [handbook_title] + relevant_docs[:2]
-
-    st.write(f"Relevant documents found: {relevant_docs}")
-    return relevant_docs
-
+        return relevant_docs
 
     def get_document_content(self, title, query):
         for doc in self.documents:
@@ -107,7 +88,6 @@ class RAGSystem:
                 chunks = self.split_into_chunks(content)
                 relevant_chunks = self.get_relevant_chunks(chunks, query)
                 return relevant_chunks
-        st.write(f"No content found for document: {title}")
         return []
 
     def split_into_chunks(self, text, chunk_size=1000):
@@ -133,17 +113,11 @@ class RAGSystem:
                 if num_tokens_from_string(context + new_context) <= max_tokens:
                     context += new_context
                 else:
-                    st.write(f"Reached token limit. Stopping at document: {title}")
                     break
             if num_tokens_from_string(context) > max_tokens:
                 break
 
-        context_tokens = num_tokens_from_string(context)
-        st.write(f"Context length: {context_tokens} tokens")
-        st.write("Context preview:")
-        st.write(context[:500] + "..." if len(context) > 500 else context)
-
-        if context_tokens == 0:
+        if len(context) == 0:
             return "I'm sorry, but I couldn't find any relevant information to answer your question."
 
         prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
@@ -158,8 +132,7 @@ class RAGSystem:
             )
             return response.choices[0].message.content
         except Exception as e:
-            st.error(f"An error occurred while generating the answer: {str(e)}")
-            return "I'm sorry, but an error occurred while generating the answer. Please try again later."
+            return "An error occurred while generating the answer."
 
     def query(self, question):
         relevant_docs = self.search(question)
@@ -175,23 +148,3 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 def num_tokens_from_string(string: str) -> int:
     """Returns the number of tokens in a text string."""
     return len(tokenizer.encode(string))
-
-# Streamlit app
-st.title("RAG-based QA System")
-
-# HARD CODED absolute paths to the files
-index_file = 'faiss_index.bin'
-titles_file = 'document_titles.json'
-documents_file = 'processed_documents.json'
-
-# Optionally, check if files exist and display their paths
-st.write("Index file exists:", os.path.exists(index_file))
-st.write("Titles file exists:", os.path.exists(titles_file))
-st.write("Documents file exists:", os.path.exists(documents_file))
-
-query_input = st.text_input("Ask a question:")
-if query_input:
-    rag_system = RAGSystem(index_file, titles_file, documents_file)
-    answer = rag_system.query(query_input)
-    st.write("Answer:")
-    st.write(answer)
