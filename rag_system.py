@@ -6,6 +6,7 @@ from sentence_transformers import SentenceTransformer
 import openai
 import tiktoken
 import streamlit as st
+import re
 
 # Helper function for counting tokens in a string
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -92,28 +93,51 @@ class RAGSystem:
                 return relevant_chunks
         return []
 
-    def split_into_chunks(self, text, chunk_size=500):
-        return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+    def split_into_chunks(self, text, max_chunk_size=500):
+        # Split text by paragraphs or newlines
+        paragraphs = re.split(r'\n\n|\n', text)  # Splits by double or single newlines
+
+        chunks = []
+        current_chunk = ""
+
+        for paragraph in paragraphs:
+            if len(current_chunk) + len(paragraph) < max_chunk_size:
+                current_chunk += paragraph + "\n"
+            else:
+                chunks.append(current_chunk.strip())  # Add the current chunk
+                current_chunk = paragraph  # Start a new chunk with the current paragraph
+
+        if current_chunk:
+            chunks.append(current_chunk.strip())  # Add the last chunk
+
+        return chunks
 
     def get_relevant_chunks(self, chunks, query):
-        chunk_embeddings = self.model.encode(chunks)
         query_embedding = self.model.encode([query])
+    
+        # Only keep chunks with the word 'recipe' or 'salsa' (as an example)
+        filtered_chunks = [chunk for chunk in chunks if 'recipe' in chunk.lower() or 'salsa' in chunk.lower()]
+
+        if not filtered_chunks:
+            # If no chunks match the filter, fall back to regular chunks
+            filtered_chunks = chunks
+
+        # Encode the filtered chunks
+        chunk_embeddings = self.model.encode(filtered_chunks)
     
         # Calculate similarities
         similarities = np.dot(chunk_embeddings, query_embedding.T).squeeze()
     
-        # Log the similarity scores for debugging
-        st.write(f"Similarity scores: {similarities}")
-    
         # Get top 3 most similar chunks
         top_indices = np.argsort(similarities)[::-1][:3]
     
-        # Log the selected chunks for debugging
-        relevant_chunks = [chunks[i] for i in top_indices]
-        st.write(f"Selected chunks: {relevant_chunks}")
+        relevant_chunks = [filtered_chunks[i] for i in top_indices]
     
-        return relevant_chunks
+        # Debugging: Log similarity scores and selected chunks
+        st.write(f"Similarity scores: {similarities}")
+        st.write(f"Selected chunks: {relevant_chunks}")
 
+        return relevant_chunks
 
     def generate_answer(self, query, relevant_docs):
         st.write("Starting to generate answer...")  # Debugging log
