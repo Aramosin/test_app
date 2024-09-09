@@ -3,8 +3,9 @@ import json
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from openai import OpenAI
+import openai  # <-- Correct import for the OpenAI library
 import tiktoken
+import streamlit as st
 
 class RAGSystem:
     def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
@@ -116,14 +117,14 @@ class RAGSystem:
         prompt = f"Based on the following documents, please answer this question: {query}\n\nContext:\n{context}\n\nAnswer:"
         
         try:
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(  # Correct method to generate completion
                 model="gpt-3.5-turbo-16k",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that answers questions based on the given documents. Provide accurate information based solely on the context provided."},
                     {"role": "user", "content": prompt}
                 ]
             )
-            return response.choices[0].message.content
+            return response.choices[0].message['content']  # Correct access to response
         except Exception as e:
             return "An error occurred while generating the answer."
 
@@ -134,11 +135,4 @@ class RAGSystem:
 
 # Initialize the OpenAI client securely
 openai.api_key = st.secrets["OPENAI_API_KEY"]
-
-# Helper function for counting tokens in a string
-tokenizer = tiktoken.get_encoding("cl100k_base")
-
-def num_tokens_from_string(string: str) -> int:
-    """Returns the number of tokens in a text string."""
-    return len(tokenizer.encode(string))
 
