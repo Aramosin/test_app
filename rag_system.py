@@ -9,11 +9,10 @@ import streamlit as st
 
 class RAGSystem:
     def __init__(self, index_file, titles_file, documents_file, model_name='all-MiniLM-L6-v2'):
-        # Use absolute paths based on the script's location
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.index_file = os.path.join(base_dir, index_file)
-        self.titles_file = os.path.join(base_dir, titles_file)
-        self.documents_file = os.path.join(base_dir, documents_file)
+        # Use absolute paths directly for all files
+        self.index_file = index_file
+        self.titles_file = titles_file
+        self.documents_file = documents_file
         self.model_name = model_name
         self.model = SentenceTransformer(model_name)
         
@@ -174,10 +173,10 @@ def num_tokens_from_string(string: str) -> int:
 # Streamlit app
 st.title("RAG-based QA System")
 
-# Define relative paths based on the script's location
-index_file = 'faiss_index.bin'
-titles_file = 'document_titles.json'
-documents_file = 'processed_documents.json'
+# HARD CODED absolute paths to the files
+index_file = '/faiss_index.bin'
+titles_file = '/document_titles.json'
+documents_file = '/processed_documents.json'
 
 # Optionally, check if files exist and display their paths
 st.write("Index file exists:", os.path.exists(index_file))
