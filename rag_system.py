@@ -98,11 +98,22 @@ class RAGSystem:
     def get_relevant_chunks(self, chunks, query):
         chunk_embeddings = self.model.encode(chunks)
         query_embedding = self.model.encode([query])
-        
+    
+        # Calculate similarities
         similarities = np.dot(chunk_embeddings, query_embedding.T).squeeze()
-        top_indices = np.argsort(similarities)[::-1][:3]  # Get top 3 most similar chunks
-        
-        return [chunks[i] for i in top_indices]
+    
+        # Log the similarity scores for debugging
+        st.write(f"Similarity scores: {similarities}")
+    
+        # Get top 3 most similar chunks
+        top_indices = np.argsort(similarities)[::-1][:3]
+    
+        # Log the selected chunks for debugging
+        relevant_chunks = [chunks[i] for i in top_indices]
+        st.write(f"Selected chunks: {relevant_chunks}")
+    
+        return relevant_chunks
+
 
     def generate_answer(self, query, relevant_docs):
         st.write("Starting to generate answer...")  # Debugging log
