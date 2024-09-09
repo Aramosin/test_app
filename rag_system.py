@@ -8,7 +8,7 @@ import tiktoken
 import streamlit as st
 
 # Initialize the OpenAI client
-client = OpenAI(api_key=st.secrets["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"])
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Initialize tokenizer
 tokenizer = tiktoken.get_encoding("cl100k_base")
