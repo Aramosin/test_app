@@ -174,9 +174,9 @@ def num_tokens_from_string(string: str) -> int:
 st.title("RAG-based QA System")
 
 # HARD CODED absolute paths to the files
-index_file = '/faiss_index.bin'
-titles_file = '/document_titles.json'
-documents_file = '/processed_documents.json'
+index_file = 'faiss_index.bin'
+titles_file = 'document_titles.json'
+documents_file = 'processed_documents.json'
 
 # Optionally, check if files exist and display their paths
 st.write("Index file exists:", os.path.exists(index_file))
