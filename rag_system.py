@@ -84,14 +84,23 @@ class RAGSystem:
             if doc['title'] == title:
                 content = doc['content']
                 if "grill recipe" in title.lower() and any(keyword in query.lower() for keyword in ["cook", "grill", "prepare"]):
-                    sections = re.split(r'\n(?=[A-Z\s]{3,}:)', content)  # Split on likely section headers
+                    # Split content into sections based on likely headers
+                    sections = re.split(r'\n(?=[A-Z\s]{3,}:)', content)
                     relevant_sections = []
+                    query_terms = query.lower().split()
                     for section in sections:
-                        if any(keyword in section.lower() for keyword in query.lower().split()):
+                        # Check if the section is relevant to the query
+                        if any(term in section.lower() for term in query_terms):
                             relevant_sections.append(section)
+                        # Always include sections about chicken if the query is about chicken
+                        elif "chicken" in query.lower() and "chicken" in section.lower():
+                            relevant_sections.append(section)
+                    
                     if relevant_sections:
-                        return relevant_sections
+                        # Join relevant sections and return
+                        return ["\n\n".join(relevant_sections)]
                 
+                # If no relevant sections found or it's not a grill recipe card, proceed with chunk-based retrieval
                 chunks = self.split_into_chunks(content)
                 relevant_chunks = self.get_relevant_chunks(chunks, query)
                 return relevant_chunks
@@ -113,7 +122,7 @@ class RAGSystem:
     def generate_answer(self, query, relevant_docs):
         context = ""
         max_tokens = 14000  # Leave some room for the prompt and response
-
+    
         for title in relevant_docs:
             relevant_chunks = self.get_document_content(title, query)
             for chunk in relevant_chunks:
@@ -125,23 +134,29 @@ class RAGSystem:
                     break
             if num_tokens_from_string(context) > max_tokens:
                 break
-
+    
         context_tokens = num_tokens_from_string(context)
         st.write(f"Context length: {context_tokens} tokens")
         st.write("Context preview:")
         st.write(context[:500] + "..." if len(context) > 500 else context)
-
+    
         if context_tokens == 0:
             return self.fallback_response(query)
-
+    
         prompt = f"""Based on the following documents, please answer this question: {query}
-
-If the question is about cooking a specific food item, provide a clear and concise summary of the cooking process, including any important steps, temperatures, or timing information.
-
-Context:
-{context}
-
-Answer:"""
+    
+    If the question is about cooking a specific food item, provide a clear and concise summary of the cooking process, including:
+    1. Preparation steps
+    2. Cooking method (e.g., grilling, frying)
+    3. Temperature and timing information
+    4. Any specific instructions or tips mentioned
+    
+    If the information is not available in the given context, please state that clearly.
+    
+    Context:
+    {context}
+    
+    Answer:"""
         
         try:
             response = client.chat.completions.create(
